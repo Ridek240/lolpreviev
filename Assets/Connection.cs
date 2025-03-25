@@ -4,6 +4,9 @@ using Newtonsoft.Json.Linq;
 using System.Collections;
 using System.IO;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System;
 
 public class Connection : MonoBehaviour
 {
@@ -15,7 +18,8 @@ public class Connection : MonoBehaviour
     void Start()
     {
         Api_Key = _Api_Key;
-        GetMatch("EUN1_3748310469");
+        GetMatch("EUN1_3753654959");
+        GetDragonData();
     }
 
     public async void GetMatch(string matchid)
@@ -33,7 +37,8 @@ public class Connection : MonoBehaviour
 
         JObject playerInfo = JObject.Parse(request.downloadHandler.text);
         string jsonString = playerInfo.ToString(Newtonsoft.Json.Formatting.Indented);
-        File.WriteAllText("test3.json", jsonString);
+        File.WriteAllText("test4timeline.json", jsonString);
+        
         var sus = playerInfo["info"];
         var sus2 = sus["participants"];
         int i = 0;
@@ -63,6 +68,7 @@ public class Connection : MonoBehaviour
             //Debug.Log($"{.ToString()}");
             //Debug.Log($"{item["riotIdGameName"].ToString()}");
         }
+        
     }
 
 
@@ -71,4 +77,59 @@ public class Connection : MonoBehaviour
     {
         
     }
+
+
+    private string apiUrl = "https://127.0.0.1:2999/liveclientdata/allgamedata";
+    private async Task<string> GetDragonData()
+    {
+        using (HttpClient client = new HttpClient())
+        {
+            try
+            {
+                // Akceptujemy wszystkie certyfikaty SSL (pomaga, jeúli masz problemy z certyfikatem)
+                client.DefaultRequestHeaders.Add("User-Agent", "UnityClient");
+
+                // Pobierz dane z API
+                HttpResponseMessage response = await client.GetAsync(apiUrl);
+
+                // Sprawdü, czy odpowiedü jest poprawna
+                if (response.IsSuccessStatusCode)
+                {
+                    // Odczytaj dane w formacie JSON
+                    string jsonResponse = await response.Content.ReadAsStringAsync();
+
+                    // Deserializuj JSON do obiektu
+                    GameData gameData = JsonUtility.FromJson<GameData>(jsonResponse);
+
+                    // Przygotuj dane o smokach w formacie string
+                    string dragonInfo = $"Pierwszy smok: {gameData.gameData.nextDragonType}\nDrugi smok: {gameData.gameData.secondDragonType}";
+
+                    return dragonInfo;
+                }
+                else
+                {
+                    return "B≥πd po≥πczenia: " + response.StatusCode;
+                }
+            }
+            catch (Exception ex)
+            {
+                return "B≥πd: " + ex.Message;
+            }
+        }
+    }
+
+    // Klasa do przechowywania danych gry (dostosuj do struktury JSON)
+    [System.Serializable]
+    public class GameData
+    {
+        public GameDataInfo gameData;
+    }
+
+    [System.Serializable]
+    public class GameDataInfo
+    {
+        public string nextDragonType;
+        public string secondDragonType;
+    }
+
 }
