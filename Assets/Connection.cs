@@ -19,7 +19,7 @@ public class Connection : MonoBehaviour
     {
         Api_Key = _Api_Key;
         GetMatch("EUN1_3753654959");
-        GetDragonData();
+        //GetDragonData();
     }
 
     public async void GetMatch(string matchid)

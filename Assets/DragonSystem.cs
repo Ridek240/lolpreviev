@@ -32,8 +32,9 @@ public class DragonSystem : MonoBehaviour
             {
                 string jsonResponse = request.downloadHandler.text;
 
-                JObject playerInfo = JObject.Parse(request.downloadHandler.text)
+                JObject playerInfo = JObject.Parse(request.downloadHandler.text);
             }
+        }
 
 
     }

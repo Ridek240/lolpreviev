@@ -134,7 +134,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Chettech_0: 6141196926755160014
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
