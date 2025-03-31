@@ -12,7 +12,7 @@ public class PlayerElement
     public int VisionScore;
     public float VisionScoreMinute;
     public int Minions;
-    public int GoldPerMinute;
+    public float GoldPerMinute;
     public Team Team;
 
 

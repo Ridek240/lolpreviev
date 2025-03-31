@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System;
+using TMPro;
 
 public class Connection : MonoBehaviour
 {
@@ -14,6 +15,9 @@ public class Connection : MonoBehaviour
     public static string Api_Key;
     public string _Api_Key;
     List<PlayerElement> playerElements = new List<PlayerElement>();
+    public TextMeshProUGUI TimeText;
+    public Objectives BlueSide;
+    public Objectives RedSide;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -40,9 +44,13 @@ public class Connection : MonoBehaviour
         File.WriteAllText("test4timeline.json", jsonString);
         
         var sus = playerInfo["info"];
+
+        Settime(playerInfo["info"]["gameDuration"].Value<int>());
+        
         var sus2 = sus["participants"];
         int i = 0;
-        foreach(var item in sus2)
+        int[] gold = new int[2];
+        foreach (var item in sus2)
         {
 
             var element = new PlayerElement
@@ -57,9 +65,17 @@ public class Connection : MonoBehaviour
                 VisionScore = item["visionScore"].Value<int>(),
                 VisionScoreMinute = item["challenges"]["visionScorePerMinute"].Value<float>(),
                 Minions = item["totalMinionsKilled"].Value<int>(),
-                GoldPerMinute = item["challenges"]["goldPerMinute"].Value<int>(),
+                GoldPerMinute = item["challenges"]["goldPerMinute"].Value<float>(),
                 Team = item["teamId"].Value<int>() == 100 ? Team.Blue : Team.Red
             };
+            if (item["teamId"].Value<int>() == 100)
+            {
+                gold[0] += item["goldEarned"].Value<int>();
+            }
+            else
+            {
+                gold[1] += item["goldEarned"].Value<int>();
+            }
 
             playerElements.Add(element);
 
@@ -68,10 +84,41 @@ public class Connection : MonoBehaviour
             //Debug.Log($"{.ToString()}");
             //Debug.Log($"{item["riotIdGameName"].ToString()}");
         }
+
+        BlueSide.Gold.text = gold[0].ToString();
+        RedSide.Gold.text = gold[1].ToString();
+        var teams = sus["teams"];
+
+        foreach (var item in teams)
+        {
+            Objectives _object;
+            if (item["teamId"].Value<int>() == 100)
+                _object = BlueSide;
+            if (item["teamId"].Value<int>() == 200)
+                _object = RedSide;
+            else
+                _object = BlueSide;
+
+            var obj = item["objectives"];
+            _object.Baron.text = obj["baron"]["kills"].Value<int>().ToString();
+            _object.Dragon.text = obj["dragon"]["kills"].Value<int>().ToString();
+            _object.Atakhan.text = obj["atakhan"]["kills"].Value<int>().ToString();
+            _object.Horde.text = obj["horde"]["kills"].Value<int>().ToString();
+            _object.Inhib.text = obj["inhibitor"]["kills"].Value<int>().ToString();
+            _object.Herald.text = obj["riftHerald"]["kills"].Value<int>().ToString();
+            _object.Turret.text = obj["tower"]["kills"].Value<int>().ToString();
+                
+        }
+
         
     }
 
-
+    void Settime(int timestamp)
+    {
+        int minutes = (int)(timestamp / 60);
+        int seconds = (int)(timestamp % 60);
+        TimeText.text = $"{minutes}:{seconds}";
+    }
     // Update is called once per frame
     void Update()
     {
