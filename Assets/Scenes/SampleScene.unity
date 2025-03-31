@@ -1342,6 +1342,8 @@ GameObject:
   m_Component:
   - component: {fileID: 549559069}
   - component: {fileID: 549559068}
+  - component: {fileID: 549559070}
+  - component: {fileID: 549559071}
   m_Layer: 0
   m_Name: GameObject
   m_TagString: Untagged
@@ -1361,7 +1363,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3637f864443fbe40a68ddd6c542ec1f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _Api_Key: RGAPI-51778b76-9626-42e1-abe9-7767eb903d86
+  _Api_Key: 
   TimeText: {fileID: 9646310}
   BlueSide: {fileID: 707350202}
   RedSide: {fileID: 167720039}
@@ -1380,6 +1382,30 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &549559070
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 549559067}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf7d9998b49a13a4db7260ff71298b53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &549559071
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 549559067}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad45c2716fe9e3e4c8c1484ba7fa542a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &631235930
 GameObject:
   m_ObjectHideFlags: 0
@@ -3207,7 +3233,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: -342.7199, y: 172.5075}
+  m_AnchoredPosition: {x: -338, y: 172.5075}
   m_SizeDelta: {x: 364.1853, y: 122.3046}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1500138175
@@ -3264,7 +3290,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 1
-  m_HorizontalAlignment: 2
+  m_HorizontalAlignment: 1
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0

@@ -18,30 +18,110 @@ public class Connection : MonoBehaviour
     public TextMeshProUGUI TimeText;
     public Objectives BlueSide;
     public Objectives RedSide;
+    public static Connection Instance;
+    public Dictionary<string, List<string>> PlayersInTeams = new Dictionary<string, List<string>>();
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+
+    void LoadApiKey()
     {
-        Api_Key = _Api_Key;
-        GetMatch("EUN1_3753654959");
-        //GetDragonData();
+        // Œcie¿ka do pliku (przyk³ad - zmieñ na w³asn¹ œcie¿kê)
+        string filePath = "C:\\tournament\\ApiKey.txt";
+
+        // Sprawdzamy, czy plik istnieje
+        if (File.Exists(filePath))
+        {
+            // Wczytujemy zawartoœæ pliku
+            string fileContent = File.ReadAllText(filePath);
+            Api_Key = fileContent;
+            Debug.Log("File Content: " + fileContent);
+        }
+        else
+        {
+            Debug.LogError("Plik nie istnieje w podanej œcie¿ce!");
+        }
+    }
+    void LoadData()
+    {
+        // Œcie¿ka do pliku (przyk³ad - zmieñ na w³asn¹ œcie¿kê)
+        string filePath = "C:\\tournament\\Teams.json";
+
+        // Sprawdzamy, czy plik istnieje
+        if (File.Exists(filePath))
+        {
+            // Wczytujemy zawartoœæ pliku
+            string fileContent = File.ReadAllText(filePath);
+            JObject playerInfo = JObject.Parse(fileContent);
+
+            foreach (var player in playerInfo["Teams"]) 
+            {
+                List<string> list= new List<string>();//PlayersInTeams.Find(x=>x.key == player["TeamName"].ToString());
+                try
+                {
+                    list = PlayersInTeams[player["TeamName"].ToString()];
+                }
+                catch { }
+
+                foreach (var plaername in player["Players"])
+                {
+                    
+                    if(list != null)
+                    {
+                        list.Add(plaername.ToString());
+                    }
+                    else
+                    {
+                        list = new List<string>();
+                        list.Add(plaername.ToString());
+                    }
+                }
+                PlayersInTeams.Add(player["TeamName"].ToString(), list);
+            }
+            
+        }
+        else
+        {
+            Debug.LogError("Plik nie istnieje w podanej œcie¿ce!");
+        }
     }
 
-    public async void GetMatch(string matchid)
+    private void Awake()
     {
+        Instance = this;
+    }
+    void Start()
+    {
+
+        Api_Key = _Api_Key;
+        LoadApiKey();
+        LoadData();
+        //SetSystem("","","EUN1_3753654959");
+        //GetDragonData();
+    }
+    public void SetSystem(string BlueTeam, string RedTeam, string MatchId)
+    {
+        LoadApiKey();
+        BlueSide.Team.text = BlueTeam;
+        RedSide.Team.text = RedTeam;
+        StartCoroutine(GetMatch(MatchId));
+    }
+    public IEnumerator GetMatch(string matchid)
+    {
+
+        Debug.Log($"SZukam meczu dla {matchid}");
         playerElements.Clear();
         string api_url = $"https://europe.api.riotgames.com/lol/match/v5/matches/{matchid}?api_key={Api_Key}";
         UnityWebRequest request = UnityWebRequest.Get(api_url);
-        await request.SendWebRequest();
+        yield return request.SendWebRequest();
 
         if (request.result != UnityWebRequest.Result.Success)
         {
             Debug.LogError($"Error fetching player: {request.error}");
-            return;
+            yield break;
         }
 
         JObject playerInfo = JObject.Parse(request.downloadHandler.text);
         string jsonString = playerInfo.ToString(Newtonsoft.Json.Formatting.Indented);
-        File.WriteAllText("test4timeline.json", jsonString);
+        //File.WriteAllText("test4timeline.json", jsonString);
         
         var sus = playerInfo["info"];
 
@@ -49,6 +129,8 @@ public class Connection : MonoBehaviour
         
         var sus2 = sus["participants"];
         int i = 0;
+        int blueTeamit = 0;
+        int redTeamit = 0;
         int[] gold = new int[2];
         foreach (var item in sus2)
         {
@@ -70,10 +152,18 @@ public class Connection : MonoBehaviour
             };
             if (item["teamId"].Value<int>() == 100)
             {
+                if (PlayersInTeams.TryGetValue(BlueSide.Team.text, out List<string> players))
+                {
+                    element.PlayerName = players[blueTeamit++];
+                }
                 gold[0] += item["goldEarned"].Value<int>();
             }
             else
             {
+                if (PlayersInTeams.TryGetValue(RedSide.Team.text, out List<string> players))
+                {
+                    element.PlayerName = players[redTeamit++];
+                }
                 gold[1] += item["goldEarned"].Value<int>();
             }
 
