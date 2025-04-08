@@ -8,6 +8,10 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System;
 using TMPro;
+using UnityEngine.UI;
+using Newtonsoft.Json.Serialization;
+using Newtonsoft.Json;
+
 
 public class Connection : MonoBehaviour
 {
@@ -19,9 +23,50 @@ public class Connection : MonoBehaviour
     public Objectives BlueSide;
     public Objectives RedSide;
     public static Connection Instance;
+    public Image Table;
+    public Camera environment;
     public Dictionary<string, List<string>> PlayersInTeams = new Dictionary<string, List<string>>();
+    public List<TextMeshProUGUI> gui = new List<TextMeshProUGUI>();
+    public List<Image> images = new List<Image>();
+    public List<Image> banns = new List<Image>();
+    public Dictionary<int,string> IdToChamps = new Dictionary<int,string>();
     // Start is called once before the first execution of Update after the MonoBehaviour is created
 
+
+    void StartUP()
+    {
+        string filePath = "C:\\tournament\\Settings.json";
+
+        // Sprawdzamy, czy plik istnieje
+        if (File.Exists(filePath))
+        {
+            // Wczytujemy zawartoœæ pliku
+            string fileContent = File.ReadAllText(filePath);
+            JObject playerInfo = JObject.Parse(fileContent);
+
+
+            Material mat = Table.material;
+            ColorUtility.TryParseHtmlString($"#{playerInfo["PrimaryColor"]}", out Color PrimaryColor);
+            ColorUtility.TryParseHtmlString($"#{playerInfo["SecondaryColor"]}", out Color SecondaryColor);
+            ColorUtility.TryParseHtmlString($"#{playerInfo["KeyColor"]}", out Color KeyColor);
+            mat.SetColor("_ReplaceColor1", PrimaryColor);
+            mat.SetColor("_ReplaceColor2", SecondaryColor);
+            environment.backgroundColor = KeyColor;
+
+            foreach (var playerElement in Menager.Instance.list)
+            {
+                playerElement.SetElementsColor(PrimaryColor);
+            }
+            foreach(var el in gui)
+            {
+                el.color = PrimaryColor;
+            }
+            foreach(var el in images)
+            {
+                el.material.SetColor("_Color1", PrimaryColor);
+            }
+        }
+    }
     void LoadApiKey()
     {
         // Œcie¿ka do pliku (przyk³ad - zmieñ na w³asn¹ œcie¿kê)
@@ -88,12 +133,14 @@ public class Connection : MonoBehaviour
     {
         Instance = this;
     }
-    void Start()
+    async void Start()
     {
-
+        StartUP();
         Api_Key = _Api_Key;
         LoadApiKey();
         LoadData();
+        IdToChamps = await GetChampionDictionaryAsync();
+        //await DownloadAllChampionIcons();
         //SetSystem("","","EUN1_3753654959");
         //GetDragonData();
     }
@@ -116,12 +163,20 @@ public class Connection : MonoBehaviour
         if (request.result != UnityWebRequest.Result.Success)
         {
             Debug.LogError($"Error fetching player: {request.error}");
+            if(request.responseCode == 403)
+            {
+                HttpServer.assignedData = "Api Key Error";
+            }
+            if (request.responseCode == 404)
+            {
+                HttpServer.assignedData = "MatchId Error";
+            }
             yield break;
         }
+        HttpServer.assignedData = "OK";
 
         JObject playerInfo = JObject.Parse(request.downloadHandler.text);
-        string jsonString = playerInfo.ToString(Newtonsoft.Json.Formatting.Indented);
-        //File.WriteAllText("test4timeline.json", jsonString);
+
         
         var sus = playerInfo["info"];
 
@@ -137,7 +192,7 @@ public class Connection : MonoBehaviour
 
             var element = new PlayerElement
             {
-                Champion = item["championName"].ToString(),
+                Champion = IdToChamps[item["championId"].Value<int>()],
                 PlayerName = item["riotIdGameName"].ToString(),
                 kills = item["kills"].Value<int>(),
                 deaths = item["deaths"].Value<int>(),
@@ -178,7 +233,7 @@ public class Connection : MonoBehaviour
         BlueSide.Gold.text = gold[0].ToString();
         RedSide.Gold.text = gold[1].ToString();
         var teams = sus["teams"];
-
+        i = 0;
         foreach (var item in teams)
         {
             Objectives _object;
@@ -197,6 +252,12 @@ public class Connection : MonoBehaviour
             _object.Inhib.text = obj["inhibitor"]["kills"].Value<int>().ToString();
             _object.Herald.text = obj["riftHerald"]["kills"].Value<int>().ToString();
             _object.Turret.text = obj["tower"]["kills"].Value<int>().ToString();
+            foreach (var ban in item["bans"])
+            {
+                banns[i].sprite = Resources.Load<Sprite>($"Champions/{CleanChampionName(IdToChamps[ban["championId"].Value<int>()])}");
+                i++;
+            }
+
                 
         }
 
@@ -208,6 +269,14 @@ public class Connection : MonoBehaviour
         int minutes = (int)(timestamp / 60);
         int seconds = (int)(timestamp % 60);
         TimeText.text = $"{minutes}:{seconds}";
+    }
+
+    public static string CleanChampionName(string name)
+    {
+        // Usuwa wszystkie znaki niebêd¹ce literami lub cyframi
+        var chars = name.ToCharArray();
+        var cleanChars = Array.FindAll(chars, c => char.IsLetterOrDigit(c));
+        return new string(cleanChars);
     }
     // Update is called once per frame
     void Update()
@@ -253,6 +322,76 @@ public class Connection : MonoBehaviour
                 return "B³¹d: " + ex.Message;
             }
         }
+    }
+
+    public static async Task<Dictionary<int, string>> GetChampionDictionaryAsync()
+    {
+
+        
+        using HttpClient client = new HttpClient();
+        string versionJson = await client.GetStringAsync("https://ddragon.leagueoflegends.com/api/versions.json");
+        List<string> versions = JsonConvert.DeserializeObject<List<string>>(versionJson);
+        string latestVersion = versions[0];
+        string url = $"https://ddragon.leagueoflegends.com/cdn/{latestVersion}/data/en_US/champion.json";
+
+        string json = await client.GetStringAsync(url);
+
+        JObject root = JObject.Parse(json);
+        JObject data = (JObject)root["data"];
+
+        var championDict = new Dictionary<int, string>();
+
+        foreach (var champ in data.Properties())
+        {
+            int id = int.Parse(champ.Value["key"].ToString());
+            string name = champ.Value["name"].ToString();
+            championDict[id] = name;
+        }
+
+        return championDict;
+    }
+
+    async Task DownloadAllChampionIcons()
+    {
+        using HttpClient client = new HttpClient();
+
+        string VersionsUrl = "https://ddragon.leagueoflegends.com/api/versions.json";
+        string ChampionListUrlTemplate = "https://ddragon.leagueoflegends.com/cdn/{0}/data/en_US/champion.json";
+        string ChampionIconUrlTemplate = "https://ddragon.leagueoflegends.com/cdn/{0}/img/champion/{1}.png";
+        string version = "latest";
+
+    // Pobierz najnowsz¹ wersjê
+    string versionJson = await client.GetStringAsync(VersionsUrl);
+        JArray versions = JArray.Parse(versionJson);
+        version = versions[0].ToString();
+
+        // Pobierz listê championów
+        string champListUrl = string.Format(ChampionListUrlTemplate, version);
+        string champJson = await client.GetStringAsync(champListUrl);
+        JObject data = JObject.Parse(champJson)["data"] as JObject;
+
+        // Utwórz folder jeœli nie istnieje
+        string folderPath = Path.Combine(Application.dataPath, "Resources/Champions");
+        if (!Directory.Exists(folderPath))
+            Directory.CreateDirectory(folderPath);
+
+        foreach (var champ in data.Properties())
+        {
+            string champName = champ.Name;
+            string iconUrl = string.Format(ChampionIconUrlTemplate, version, champName);
+            string savePath = Path.Combine(folderPath, $"{champName}.png");
+
+            if (File.Exists(savePath)) continue; // nie pobieraj ponownie
+
+            byte[] iconData = await client.GetByteArrayAsync(iconUrl);
+            File.WriteAllBytes(savePath, iconData);
+
+            Debug.Log($"Pobrano ikonê: {champName}");
+        }
+
+#if UNITY_EDITOR
+        UnityEditor.AssetDatabase.Refresh();
+#endif
     }
 
     // Klasa do przechowywania danych gry (dostosuj do struktury JSON)

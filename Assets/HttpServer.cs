@@ -7,14 +7,20 @@ using Newtonsoft.Json.Linq;
 public class HttpServer : MonoBehaviour
 {
     private HttpListener listener;
-
+    public static string Message;
+    public static string assignedData = "Hello World";
     void Awake()
     {
         // Tworzymy nowy HttpListener, który bêdzie nas³uchiwa³ na okreœlonym porcie.
         listener = new HttpListener();
-        listener.Prefixes.Add("http://localhost:2137/");  // Nas³uchujemy na porcie 8080
+        listener.Prefixes.Add("http://*:2137/");  // Nas³uchujemy na porcie 8080
         listener.Start();
-        Debug.Log("Serwer nas³uchuje na http://localhost:2137/");
+        string localIP = GetLocalIPAddress();
+
+        if (!string.IsNullOrEmpty(localIP))
+        {
+            Debug.Log("Serwer nas³uchuje na http://" + localIP + ":2137/");
+        }
 
         // Uruchamiamy nas³uchiwacz w osobnym w¹tku.
         System.Threading.Thread listenerThread = new System.Threading.Thread(new System.Threading.ThreadStart(ListenForRequests));
@@ -29,7 +35,16 @@ public class HttpServer : MonoBehaviour
             HttpListenerContext context = listener.GetContext();
             HttpListenerRequest request = context.Request;
             HttpListenerResponse response = context.Response;
+            response.Headers.Add("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+            response.Headers.Add("Pragma", "no-cache");
+            response.Headers.Add("Expires", "0");
 
+
+            Debug.Log("Otrzymano ¿¹danie: " + request.Url.AbsolutePath);
+
+            // Przypisujemy dynamiczne dane
+            //assignedData = "Dane przypisane: " + DateTime.Now.ToString();  // Dynamiczne dane dla ³atwiejszego testowania
+            Debug.Log("Przypisano nowe dane: " + assignedData);
             // Odczytujemy dane z ¿¹dania (np. JSON).
             string responseString = "Brak danych";
             if (request.HasEntityBody)
@@ -47,17 +62,32 @@ public class HttpServer : MonoBehaviour
                             playerInfo["MatchID"].ToString()
                         );
                     });
-                    Debug.Log("Otrzymano dane: " + requestBody);
-                    responseString = "\"Dane otrzymane\": " + requestBody;  // Mo¿emy odpowiedzieæ tymi danymi.
+                    responseString = $"Otrzymano dane: {assignedData}";
                 }
+                //responseString = Message;
             }
 
             // Ustawiamy nag³ówki odpowiedzi i wysy³amy odpowiedŸ.
+            response.ContentType = "text/plain";
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
             response.ContentLength64 = buffer.Length;
             response.OutputStream.Write(buffer, 0, buffer.Length);
             response.OutputStream.Close();
         }
+    }
+
+    string GetLocalIPAddress()
+    {
+        string localIP = string.Empty;
+        foreach (var host in Dns.GetHostEntry(Dns.GetHostName()).AddressList)
+        {
+            if (host.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+            {
+                localIP = host.ToString();
+                break;
+            }
+        }
+        return localIP;
     }
 
     void OnApplicationQuit()
