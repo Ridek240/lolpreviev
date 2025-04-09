@@ -20,6 +20,8 @@ public class Connection : MonoBehaviour
     public string _Api_Key;
     List<PlayerElement> playerElements = new List<PlayerElement>();
     public TextMeshProUGUI TimeText;
+    public TextMeshProUGUI LeftTeam;
+    public TextMeshProUGUI RightTeam;
     public Objectives BlueSide;
     public Objectives RedSide;
     public static Connection Instance;
@@ -29,11 +31,29 @@ public class Connection : MonoBehaviour
     public List<TextMeshProUGUI> gui = new List<TextMeshProUGUI>();
     public List<Image> images = new List<Image>();
     public List<Image> banns = new List<Image>();
-    public Dictionary<int,string> IdToChamps = new Dictionary<int,string>();
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    public Dictionary<int, string> IdToChamps = new Dictionary<int, string>();
+    public bool[] Ban_Availbe = new bool[10];
+
+    Dictionary<int, int> BlueSideNubers = new Dictionary<int, int>
+        {
+            { 1, 0 },
+            { 3, 1 },
+            { 5, 2 },
+            { 2, 3 },
+            { 4, 4 }
+        };
+    Dictionary<int, int> RedSideNubers = new Dictionary<int, int>
+        {
+            { 2, 5 },
+            { 4, 6 },
+            { 6, 7 },
+            { 1, 8 },
+            { 3, 9 }
+        };
+// Start is called once before the first execution of Update after the MonoBehaviour is created
 
 
-    void StartUP()
+void StartUP()
     {
         string filePath = "C:\\tournament\\Settings.json";
 
@@ -94,6 +114,7 @@ public class Connection : MonoBehaviour
         if (File.Exists(filePath))
         {
             // Wczytujemy zawartoœæ pliku
+            PlayersInTeams.Clear();
             string fileContent = File.ReadAllText(filePath);
             JObject playerInfo = JObject.Parse(fileContent);
 
@@ -138,11 +159,9 @@ public class Connection : MonoBehaviour
         StartUP();
         Api_Key = _Api_Key;
         LoadApiKey();
-        LoadData();
+        //LoadData();
         IdToChamps = await GetChampionDictionaryAsync();
-        //await DownloadAllChampionIcons();
-        //SetSystem("","","EUN1_3753654959");
-        //GetDragonData();
+
     }
     public void SetSystem(string BlueTeam, string RedTeam, string MatchId)
     {
@@ -153,7 +172,7 @@ public class Connection : MonoBehaviour
     }
     public IEnumerator GetMatch(string matchid)
     {
-
+        LoadData();
         Debug.Log($"SZukam meczu dla {matchid}");
         playerElements.Clear();
         string api_url = $"https://europe.api.riotgames.com/lol/match/v5/matches/{matchid}?api_key={Api_Key}";
@@ -176,8 +195,10 @@ public class Connection : MonoBehaviour
         HttpServer.assignedData = "OK";
 
         JObject playerInfo = JObject.Parse(request.downloadHandler.text);
+        string jsonString = playerInfo.ToString(Newtonsoft.Json.Formatting.Indented);
+        File.WriteAllText("test3.json", jsonString);
 
-        
+
         var sus = playerInfo["info"];
 
         Settime(playerInfo["info"]["gameDuration"].Value<int>());
@@ -234,15 +255,32 @@ public class Connection : MonoBehaviour
         RedSide.Gold.text = gold[1].ToString();
         var teams = sus["teams"];
         i = 0;
+        foreach (var frame in banns)
+        {
+            frame.sprite = Resources.Load<Sprite>($"Champions/None");
+        }
         foreach (var item in teams)
         {
             Objectives _object;
+            Dictionary<int, int> dict;
             if (item["teamId"].Value<int>() == 100)
+            {
+                dict = BlueSideNubers;
                 _object = BlueSide;
+                LeftTeam.text = item["win"].Value<bool>() ? "WIN" : "LOSE";
+                
+            }
             if (item["teamId"].Value<int>() == 200)
+            {
                 _object = RedSide;
+                dict = RedSideNubers;
+                RightTeam.text = item["win"].Value<bool>() ? "WIN" : "LOSE";
+            }
             else
+            {
                 _object = BlueSide;
+                dict = BlueSideNubers;
+            }
 
             var obj = item["objectives"];
             _object.Baron.text = obj["baron"]["kills"].Value<int>().ToString();
@@ -252,9 +290,11 @@ public class Connection : MonoBehaviour
             _object.Inhib.text = obj["inhibitor"]["kills"].Value<int>().ToString();
             _object.Herald.text = obj["riftHerald"]["kills"].Value<int>().ToString();
             _object.Turret.text = obj["tower"]["kills"].Value<int>().ToString();
+
             foreach (var ban in item["bans"])
             {
-                banns[i].sprite = Resources.Load<Sprite>($"Champions/{CleanChampionName(IdToChamps[ban["championId"].Value<int>()])}");
+
+                banns[dict[ban["pickTurn"].Value<int>()]].sprite = Resources.Load<Sprite>($"Champions/{CleanChampionName(IdToChamps[ban["championId"].Value<int>()])}");
                 i++;
             }
 
@@ -268,7 +308,7 @@ public class Connection : MonoBehaviour
     {
         int minutes = (int)(timestamp / 60);
         int seconds = (int)(timestamp % 60);
-        TimeText.text = $"{minutes}:{seconds}";
+        TimeText.text = $"{minutes}:{seconds:D2}";
     }
 
     public static string CleanChampionName(string name)
