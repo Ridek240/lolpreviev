@@ -11,6 +11,7 @@ using TMPro;
 using UnityEngine.UI;
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json;
+using Klak.Ndi;
 
 
 public class Connection : MonoBehaviour
@@ -33,6 +34,8 @@ public class Connection : MonoBehaviour
     public List<Image> banns = new List<Image>();
     public Dictionary<int, string> IdToChamps = new Dictionary<int, string>();
     public bool[] Ban_Availbe = new bool[10];
+
+    public NdiSender ndi;
 
     Dictionary<int, int> BlueSideNubers = new Dictionary<int, int>
         {
@@ -162,7 +165,10 @@ void StartUP()
         //LoadData();
         IdToChamps = await GetChampionDictionaryAsync();
 
+        Debug.Log(ndi.didStart);
     }
+
+
     public void SetSystem(string BlueTeam, string RedTeam, string MatchId)
     {
         LoadApiKey();
@@ -321,7 +327,7 @@ void StartUP()
     // Update is called once per frame
     void Update()
     {
-        
+        Debug.Log(ndi.didStart);
     }
 
 
