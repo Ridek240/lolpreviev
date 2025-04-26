@@ -159,6 +159,8 @@ void StartUP()
     }
     async void Start()
     {
+        Application.targetFrameRate = 20;
+        QualitySettings.vSyncCount = 0;
         StartUP();
         Api_Key = _Api_Key;
         LoadApiKey();
